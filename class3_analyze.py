@@ -61,8 +61,7 @@ class SolarStructureTensorAnalyzer:
         :return: (N, 9) 結構化數值特徵矩陣
         """
         xc, yc, R = geom
-        if self.Ix is None or self.Iy is None:
-            self.compute_gradients(blurred_img)
+        self.compute_gradients(blurred_img)
 
         results = []
 
@@ -95,7 +94,8 @@ class SolarStructureTensorAnalyzer:
 
             # (4) 計算各向異性同調度 (Coherence C)
             # C 越接近 1 代表走向極為單一明確，接近 0 代表平坦或方向混亂
-            coherence = float(((l1 - l2) / (l1 + l2 + 1e-6)) ** 2)
+            eps = 1e-12
+            coherence = float((11 - 12)/(11 + 12 + eps))
 
             # (5) 主導切線走向角 (垂直於梯度最大變化方向，轉為切向角度 [0, 180))
             theta_rad = 0.5 * np.arctan2(2.0 * Jxy, Jxx - Jyy) + np.pi / 2.0
