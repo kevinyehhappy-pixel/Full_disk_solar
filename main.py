@@ -88,12 +88,21 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
         show_gui=show_gui
     )
 
+    # -------------------------------------------------------------
+    # 步驟五：Result 專項後處理分析 (緯度對方向、緯度對亮度、南北半球對稱性與二維拓撲圖)
+    # -------------------------------------------------------------
+    print("\n>>> [模組五] 啟動 CSV 專項統計分析 (Result & result.image)...")
+    from Result.run_all_results import run_all_post_analyses
+    post_outputs = run_all_post_analyses(csv_path=outputs["csv_path"], show_gui=show_gui)
+    outputs["post_analysis"] = post_outputs
+
     print("\n" + "=" * 70)
-    print("  [完成] 全日面太陽分析管線運行成功！")
+    print("  [完成] 全日面太陽分析與後處理統計管線運行成功！")
     print(f"  有效方格數: {len(results_arr)} 筆")
     print(f"  .npy 數據檔案: {outputs['npy_path']}")
     print(f"  .csv 特徵清單: {outputs['csv_path']}")
     print(f"  疊加渲染影像: {outputs['overlay_path']}")
+    print(f"  後處理統計報告: {post_outputs['report_path']}")
     print("=" * 70)
 
     return outputs
