@@ -46,8 +46,15 @@ whole_disk_ana/
   * **雙軌日輪定標（FITS 優先 + 影像擬合回退）**：
     1. **FITS 原生中繼定標**：直接讀取 SunPy Map / FITS Header 中的 `CRPIX1`, `CRPIX2`（參考像素/圓心）與 `RSUN_OBS` / `CDELT1`（角半徑換算像素半徑 $R_\odot = \frac{R_{obs}}{\text{scale}}$），精度可達亞像素等級且完全不受邊緣日珥或雜訊干擾。
     2. **形態學與幾何矩回退（Fallback）**：若缺少完整 Header，自動啟動邊角遮蔽、二值化、形態學閉合與 `cv2.moments` 進行幾何擬合。
+    3. **基準物理比例尺**：計算盤面中心標稱物理比例尺 $s_0 = \frac{R_{\odot, \text{km}}}{R_{\text{px}}}$ [km/px]（其中 $R_{\odot, \text{km}} = 695,700\text{ km}$）。
   * **CLAHE 對比增強與降噪**：透過局部自適應直方圖等化（`clipLimit=3.0`, `tileGridSize=(8, 8)`）壓平全盤邊緣昏暗（Limb Darkening），並輔以輕微高斯模糊（$3 \times 3$）抑制高頻顆粒噪聲。
   * **有效日面方格切割**：以指定邊長（例如 $32 \times 32$ 像素）在有效日面（$r \le 0.92 R_\odot$）範圍內生成獨立方格，排除邊緣光環與宇宙背景。
+  * **球面幾何透視校正與真實長寬記錄 (km)**：
+    針對各方格中心經緯度 $(\phi, \lambda)$ 執行日面正交投影球面透視補償，將像平面正方形換算為日面實際物理長方形：
+    * 東西緯向寬度：$W_{\text{km}} = \frac{s_0 \cdot \Delta x}{\cos\lambda}$
+    * 南北經向長度：$H_{\text{km}} = \frac{s_0 \cdot \Delta y}{\cos\phi}$
+    * 物理長寬比與表面積：$\text{Aspect Ratio} = \frac{W_{\text{km}}}{H_{\text{km}}}$、$\text{Area} = W_{\text{km}} \cdot H_{\text{km}}\text{ [km}^2\text{]}$
+    * 方格結構中完整保留 `width_km`, `height_km`, `aspect_ratio`, `area_km2`, `solar_lat_deg`, `solar_lon_deg`。
 
 ---
 
