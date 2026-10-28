@@ -9,6 +9,7 @@ import os
 import sys
 import argparse
 import numpy as np
+from direction_histogram import export_direction_histogram
 
 # 匯入四大核心 Classes
 from class1_ingestor import SolarSunPyIngestor
@@ -71,6 +72,15 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     print("\n>>> [模組三] 啟動 SolarStructureTensorAnalyzer...")
     analyzer = SolarStructureTensorAnalyzer(ksize=3)
     results_arr = analyzer.analyze(blurred_img, patches, geom)
+    hist_dir = os.path.join(export_dir, "direction_analysis")
+    print(f"[方向統計] 輸出位置：{os.path.abspath(hist_dir)}")
+    export_direction_histogram(
+        results_arr,
+        output_dir=hist_dir,
+        base_name=base_name,
+        coherence_min=0.1,
+        bin_width=10,
+    )
 
     # -------------------------------------------------------------
     # 步驟四：Class 4 - 數據輸出、向量疊加渲染與可視化檢驗

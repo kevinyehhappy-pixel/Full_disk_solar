@@ -58,7 +58,7 @@ class SolarStructureTensorAnalyzer:
         :param blurred_img: 經 CLAHE 與高斯平滑之影像
         :param patches: Class 2 劃分之有效方格清單
         :param geom: 日輪幾何參數 (xc, yc, R)
-        :return: (N, 9) 結構化數值特徵矩陣
+        :return: (N, 10) 結構化數值特徵矩陣，含影像角與球面方位角
         """
         xc, yc, R = geom
         self.compute_gradients(blurred_img)
@@ -95,7 +95,7 @@ class SolarStructureTensorAnalyzer:
             # (4) 計算各向異性同調度 (Coherence C)
             # C 越接近 1 代表走向極為單一明確，接近 0 代表平坦或方向混亂
             eps = 1e-12
-            coherence = float((11 - 12)/(11 + 12 + eps))
+            coherence = float(((l1 - l2) / (l1 + l2 + eps)) ** 2)
 
             # (5) 主導切線走向角 (垂直於梯度最大變化方向，轉為切向角度 [0, 180))
             theta_rad = 0.5 * np.arctan2(2.0 * Jxy, Jxx - Jyy) + np.pi / 2.0
@@ -103,6 +103,9 @@ class SolarStructureTensorAnalyzer:
 
             # (6) 換算日面經緯度
             lat_deg, lon_deg = self.project_solar_coordinates(cx, cy, xc, yc, R)
+            surface_azimuth_deg = self.image_angle_to_surface_azimuth(
+                theta_deg, lat_deg, lon_deg
+            )
 
             results.append([
                 float(grid_id),
@@ -113,10 +116,37 @@ class SolarStructureTensorAnalyzer:
                 float(theta_deg),
                 float(coherence),
                 float(lat_deg),
-                float(lon_deg)
+                float(lon_deg),
+                float(surface_azimuth_deg)
             ])
 
         results_arr = np.array(results, dtype=np.float64)
         print(f"[Class 3 分析] 張量求解完畢！有效方格數: {len(results_arr)} (矩陣維度: {results_arr.shape})")
         return results_arr
 
+    @staticmethod
+    def image_angle_to_surface_azimuth(
+        theta_deg: float, lat_deg: float, lon_deg: float
+    ) -> float:
+        """
+        將影像平面角轉為球面局部方位角，正北為 0°、往東為正。
+
+        影像座標採 x 向右、y 向下；球面採目前正交投影模型。
+        日面邊緣處投影不可逆，回傳 NaN。
+        """
+        theta_rad, lat_rad, lon_rad = np.deg2rad(
+            [theta_deg, lat_deg, lon_deg]
+        )
+        cos_lat = np.cos(lat_rad)
+        cos_lon = np.cos(lon_rad)
+
+        # Orthographic projection loses one tangent direction at the limb.
+        if abs(cos_lat * cos_lon) < 1e-6:
+            return float("nan")
+
+        dx = np.cos(theta_rad)
+        dy = np.sin(theta_rad)
+        east = (dx - np.tan(lat_rad) * np.sin(lon_rad) * dy) / cos_lon
+        north = -dy / cos_lat
+        azimuth_deg = float(np.rad2deg(np.arctan2(east, north)) % 180.0)
+        return 0.0 if np.isclose(azimuth_deg, 180.0, atol=1e-10) else azimuth_deg

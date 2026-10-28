@@ -34,7 +34,7 @@ class SolarResultExporter:
 
     def export_data(self, results_arr: np.ndarray, base_name: str) -> Tuple[str, str]:
         """
-        導出 (N, 9) 特徵矩陣至 export/ 目錄下的 .npy 與 .csv 檔案
+        導出 (N, 10) 特徵矩陣至 export/ 目錄下的 .npy 與 .csv 檔案
         """
         npy_path = os.path.join(self.export_dir, f"{base_name}_features.npy")
         csv_path = os.path.join(self.export_dir, f"{base_name}_features.csv")
@@ -43,7 +43,11 @@ class SolarResultExporter:
         np.save(npy_path, results_arr)
 
         # 2. 儲存 CSV 文件 (含欄位表頭)
-        header = "grid_id,center_x,center_y,patch_size,mean_intensity,orientation_deg,coherence,solar_lat,solar_lon"
+        header = (
+            "grid_id,center_x,center_y,patch_size,mean_intensity,"
+            "image_orientation_deg,coherence,solar_lat,solar_lon,"
+            "surface_azimuth_deg"
+        )
         np.savetxt(csv_path, results_arr, delimiter=",", header=header, comments="")
 
         print(f"[Class 4 導出] 結構化特徵數據已成功儲存:")
@@ -62,7 +66,7 @@ class SolarResultExporter:
 
         rendered_count = 0
         for row in results_arr:
-            _, cx, cy, psize, _, th_deg, coh, _, _ = row
+            _, cx, cy, psize, _, th_deg, coh, _, _, _ = row
             
             # 過濾各向同性與無顯著走向之區域
             if coh < self.coherence_min_display:
@@ -147,4 +151,3 @@ class SolarResultExporter:
             "overlay_path": img_path,
             "overlay_img": overlay
         }
-
