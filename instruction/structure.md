@@ -25,9 +25,10 @@ whole_disk_ana/
 │   └── class4_logic.png
 └── export/                # 輸出成果目錄
     ├── *_features.csv     # 結構化多維方格特徵表
-    ├── *_features.npy     # (N, 9) 二進位矩陣
+    ├── *_features.npy     # (N, 11) 二進位矩陣
     └── export.image/      # 疊加可視化影像輸出資料夾
-        └── *_overlay.png  # 全盤走向-相關性向量疊加圖
+        ├── *_overlay.png     # 全盤走向-相關性向量疊加圖
+        └── *_comparison.png  # 增強盤面與向量對比檢驗圖
 ```
 
 ---
@@ -74,7 +75,7 @@ whole_disk_ana/
 
 ### 4. `SolarResultExporter` (`class4_export.py`)
 * **主要職責**：
-  * **多維特徵導出**：將全盤方格資訊打包為 $(N, 9)$ 數值陣列，分別導出為 `.npy` 二進位檔與 `.csv` 逗號分隔檔至 `export/` 目錄。
+  * **多維特徵導出**：將全盤方格資訊打包為 $(N, 11)$ 數值陣列（含 9 項基礎特徵及真實物理長寬 $W_{\text{km}}, H_{\text{km}}$），分別導出為 `.npy` 二進位檔與 `.csv` 逗號分隔檔至 `export/` 目錄。
   * **動態向量疊加渲染**：
     * 向量長度隨同調度動態調變：$L \propto C^{0.4}$。
     * 向量顏色依走向角 $\theta$ 對應 HSV 色彩空間進行全色譜映射。

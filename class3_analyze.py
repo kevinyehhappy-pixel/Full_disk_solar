@@ -3,7 +3,8 @@ class3_analyze.py
 模組三：結構張量分析引擎 (SolarStructureTensorAnalyzer)
 利用 Sobel 微分算子計算水平與垂直梯度，構建方格二階結構張量 (Structure Tensor)，
 求解特徵值以萃取主導走向角 (切向 theta) 與各向異性相關性 (同調度 Coherence)，
-並換算方格中心之 Stonyhurst 日面經緯度。
+並換算方格中心之 Stonyhurst 日面經緯度，整合 Class 2 物理尺寸 (width_km, height_km)
+導出 11 維結構化數值矩陣。
 """
 
 import numpy as np
@@ -56,9 +57,9 @@ class SolarStructureTensorAnalyzer:
         """
         對所有有效方格執行結構張量求解
         :param blurred_img: 經 CLAHE 與高斯平滑之影像
-        :param patches: Class 2 劃分之有效方格清單
+        :param patches: Class 2 劃分之有效方格清單 (含真實物理尺度)
         :param geom: 日輪幾何參數 (xc, yc, R)
-        :return: (N, 9) 結構化數值特徵矩陣
+        :return: (N, 11) 結構化數值特徵矩陣
         """
         xc, yc, R = geom
         self.compute_gradients(blurred_img)
@@ -95,14 +96,20 @@ class SolarStructureTensorAnalyzer:
             # (4) 計算各向異性同調度 (Coherence C)
             # C 越接近 1 代表走向極為單一明確，接近 0 代表平坦或方向混亂
             eps = 1e-12
-            coherence = float((11 - 12)/(11 + 12 + eps))
+            coherence = float(((l1 - l2) / (l1 + l2 + eps)) ** 2)
 
             # (5) 主導切線走向角 (垂直於梯度最大變化方向，轉為切向角度 [0, 180))
             theta_rad = 0.5 * np.arctan2(2.0 * Jxy, Jxx - Jyy) + np.pi / 2.0
             theta_deg = float(np.rad2deg(theta_rad) % 180.0)
 
-            # (6) 換算日面經緯度
-            lat_deg, lon_deg = self.project_solar_coordinates(cx, cy, xc, yc, R)
+            # (6) 換算日面經緯度與提取真實物理長寬 (km)
+            lat_deg = float(p.get("solar_lat_deg", 0.0))
+            lon_deg = float(p.get("solar_lon_deg", 0.0))
+            if lat_deg == 0.0 and lon_deg == 0.0:
+                lat_deg, lon_deg = self.project_solar_coordinates(cx, cy, xc, yc, R)
+
+            width_km = float(p.get("width_km", 0.0))
+            height_km = float(p.get("height_km", 0.0))
 
             results.append([
                 float(grid_id),
@@ -113,10 +120,11 @@ class SolarStructureTensorAnalyzer:
                 float(theta_deg),
                 float(coherence),
                 float(lat_deg),
-                float(lon_deg)
+                float(lon_deg),
+                float(width_km),
+                float(height_km)
             ])
 
         results_arr = np.array(results, dtype=np.float64)
         print(f"[Class 3 分析] 張量求解完畢！有效方格數: {len(results_arr)} (矩陣維度: {results_arr.shape})")
         return results_arr
-

@@ -100,13 +100,13 @@ steps_c3 = [
     {"name": "4. 特徵值解析解求解", "desc": "求最大與最小梯度變化能量 lambda1, lambda2 (l1 >= l2 >= 0)", "color": "#FEFCBF", "border": "#D69E2E"},
     {"name": "5. 計算同調度 (Coherence C)", "desc": "C = ((l1 - l2) / (l1 + l2 + ε))² (衡量走向單一各向異性度 [0, 1])", "color": "#FEEBC8", "border": "#DD6B20"},
     {"name": "6. 計算主導切線走向角 (theta)", "desc": "θ = 0.5 * atan2(2*Jxy, Jxx - Jyy) + 90° (垂直於梯度主軸，度數 [0, 180))", "color": "#FEEBC8", "border": "#DD6B20"},
-    {"name": "7. Stonyhurst 日面經緯度投影與打包", "desc": "換算 solar_lat 與 solar_lon，輸出 (N, 9) 結構化數值特徵矩陣", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
+    {"name": "7. Stonyhurst 日面經緯度與物理長寬打包", "desc": "整合 solar_lat, solar_lon 與 W_km, H_km，輸出 (N, 11) 結構化數值特徵矩陣", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
 ]
 draw_flowchart("Class 3: SolarStructureTensorAnalyzer 邏輯架構圖", steps_c3, "class3_logic.png")
 
 # ==================== Class 4 邏輯圖 ====================
 steps_c4 = [
-    {"name": "1. 接收 (N, 9) 特徵矩陣與增強影像", "desc": "解析方格座標、走向角 θ、同調度 C 與日輪幾何參數", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
+    {"name": "1. 接收 (N, 11) 特徵矩陣與增強影像", "desc": "解析方格座標、走向角 θ、同調度 C、物理長寬與日輪幾何參數", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
     {"name": "2. 輸出結構化檔案至 export/ 目錄", "desc": "儲存 NumPy 二進位 (*_features.npy) 與 CSV 試算表 (*_features.csv)", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "3. 建立三通道視覺化畫布與日輪標註", "desc": "轉為 BGR 畫布，並以綠色圓圈標註定標日肢 (xc, yc, R)", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "4. 門檻過濾與向量長度動態縮放", "desc": "排除 C < 0.025 之混亂區域；線段長度調變 L 正比於 C^0.4", "color": "#FEFCBF", "border": "#D69E2E"},
