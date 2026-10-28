@@ -134,7 +134,7 @@ class SolarSunPyIngestor:
         laplacian = cv2.Laplacian(norm, cv2.CV_64F, ksize=3)
         return float(laplacian.var())
 
-    def fetch_best_full_disk_image(self, max_candidates: int = 5) -> sunpy.map.Map:
+    def fetch_best_full_disk_image(self, max_candidates: int = 5) -> sunpy.map.GenericMap:
         """
         下載候選影像並執行全日面幾何過濾與銳利度評分，選取最佳觀測幀
         """
