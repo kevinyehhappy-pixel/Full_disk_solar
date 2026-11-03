@@ -210,3 +210,4 @@ def export_direction_histogram(
         "accepted_ratio": accepted_ratio,
         "latitude_bin_width": latitude_width,
     }
+

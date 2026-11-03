@@ -9,6 +9,13 @@ import os
 import sys
 import argparse
 import numpy as np
+# 確保可正確匯入 【Analyze】 分析模組 (含已移轉之 direction_histogram)
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_ANALYZE_DIR = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.code")
+if _ANALYZE_DIR not in sys.path:
+    sys.path.insert(0, _ANALYZE_DIR)
+
 from direction_histogram import export_direction_histogram
 
 # 匯入四大核心 Classes
@@ -102,7 +109,7 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     # 步驟五：Result 專項後處理分析 (緯度對方向、緯度對亮度、南北半球對稱性與二維拓撲圖)
     # -------------------------------------------------------------
     print("\n>>> [模組五] 啟動 CSV 專項統計分析 (Result & result.image)...")
-    from Result.run_all_results import run_all_post_analyses
+    from run_all_results import run_all_post_analyses
     post_outputs = run_all_post_analyses(csv_path=outputs["csv_path"], show_gui=show_gui)
     outputs["post_analysis"] = post_outputs
 

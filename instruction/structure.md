@@ -17,6 +17,7 @@ whole_disk_ana/
 ├── main.py                # 系統執行主入口 (管線串接整合)
 ├── instruction/           # 演算法與架構文件 (含各 class 完整邏輯圖 PNG)
 │   ├── structure.md
+│   ├── FITS.md
 │   ├── CLAHE.md
 │   ├── SLOPE.md
 │   ├── class1_logic.png
