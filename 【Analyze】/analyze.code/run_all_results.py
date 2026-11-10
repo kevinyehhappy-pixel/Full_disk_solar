@@ -1,19 +1,25 @@
 """
-Result/run_all_results.py
+run_all_results.py
 整合執行『專項分析一：緯度對方向』、『專項分析二：緯度對亮度』、『專項分析三：南北半球對稱性』與『二維展開日面拓撲圖』，
-並自動產出邏輯架構圖 PNG、結構化統計 CSV 報表、高解析度科研圖表與綜合分析報告。
+並自動產出邏輯架構圖 PNG、結構化統計 CSV 報表、高解析度科研圖表與綜合分析報告至 【Analyze】/analyze.export/。
 """
 
 import os
 import sys
 import glob
 import shutil
+from typing import Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
 # 確保可匯入同目錄或根目錄模組
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_DEFAULT_PROCESS_DATA = os.path.join(_PROJECT_ROOT, "【Process】", "process.export", "process.data")
+_DEFAULT_ANALYZE_EXPORT = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.export")
+
+sys.path.insert(0, _CURRENT_DIR)
 from analysis1_lat_orientation import LatitudeOrientationAnalyzer
 from analysis2_lat_intensity import LatitudeIntensityAnalyzer
 from analysis3_hemispheric_asymmetry import HemisphericAsymmetryAnalyzer
@@ -72,10 +78,17 @@ def draw_logic_png(title: str, steps: list, out_paths: list, figsize=(9.5, 11.5)
     plt.close()
 
 
-def generate_all_analysis_logic_diagrams(instruction_dir="./instruction", 
-                                         image_dir="./export/result.image",
-                                         alt_image_dir="./Result/result.image"):
+def generate_all_analysis_logic_diagrams(instruction_dir: Optional[str] = None, 
+                                         image_dir: Optional[str] = None):
     """生成三大專項分析與二維展開拓撲圖之完整邏輯流程圖 PNG"""
+    if instruction_dir is None:
+        instruction_dir = os.path.join(_PROJECT_ROOT, "instruction")
+    if image_dir is None:
+        image_dir = os.path.join(_DEFAULT_ANALYZE_EXPORT, "analyze.image")
+
+    os.makedirs(instruction_dir, exist_ok=True)
+    os.makedirs(image_dir, exist_ok=True)
+
     # 1. 緯度對方向邏輯圖
     steps_1 = [
         {"name": "1. 讀取 CSV 特徵欄位", "desc": "載入日面緯度 solar_lat (φ)、走向角 orientation_deg (θ)、同調度 coherence (C)", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
@@ -88,8 +101,7 @@ def generate_all_analysis_logic_diagrams(instruction_dir="./instruction",
     ]
     draw_logic_png("專項分析一：緯度對方向與集中度分析邏輯流程圖", steps_1, [
         os.path.join(instruction_dir, "logic_1_lat_orientation.png"),
-        os.path.join(image_dir, "logic_1_lat_orientation.png"),
-        os.path.join(alt_image_dir, "logic_1_lat_orientation.png")
+        os.path.join(image_dir, "logic_1_lat_orientation.png")
     ])
 
     # 2. 緯度對亮度邏輯圖
@@ -100,12 +112,11 @@ def generate_all_analysis_logic_diagrams(instruction_dir="./instruction",
         {"name": "4. (Z_I, C) 二維相空間物理結構分流", "desc": "分類 A (暗條/黑子: C>=0.025, Z_I<-0.5)；分類 B (亮譜斑: C>=0.025, Z_I>+0.5)；分類 C (寧靜區)", "color": "#FEFCBF", "border": "#D69E2E"},
         {"name": "5. 緯度分箱整體亮度與明暗反差統計", "desc": "計算各緯度帶平均亮度 I_mean(φ)、中位數 I_50(φ)、標準差 σ(φ) 與四分位距 IQR(φ) = I_75 - I_25", "color": "#FEEBC8", "border": "#DD6B20"},
         {"name": "6. 暗條吸收深度與譜斑增亮雙軌分離", "desc": "分別計算各緯度帶之『暗條吸收均值曲線』與『活動區譜斑發射均值曲線』，避免明暗相消", "color": "#FEEBC8", "border": "#DD6B20"},
-        {"name": "7. 導出結構分類報表與相空間雙軌圖表", "desc": "輸出 CSV 至 Result/，並繪製雙軌剖面、IQR 包絡帶與二維相空間圖至 result.image/", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
+        {"name": "7. 導出結構分類報表與相空間雙軌圖表", "desc": "輸出 CSV 至 analyze.export/analyze.data/，並繪製雙軌剖面、IQR 包絡帶與二維相空間圖至 analyze.export/analyze.image/", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
     ]
     draw_logic_png("專項分析二：緯度對亮度與相空間結構分流邏輯流程圖", steps_2, [
         os.path.join(instruction_dir, "logic_2_lat_intensity.png"),
-        os.path.join(image_dir, "logic_2_lat_intensity.png"),
-        os.path.join(alt_image_dir, "logic_2_lat_intensity.png")
+        os.path.join(image_dir, "logic_2_lat_intensity.png")
     ])
 
     # 3. 南北半球對稱性邏輯圖
@@ -116,56 +127,71 @@ def generate_all_analysis_logic_diagrams(instruction_dir="./instruction",
         {"name": "4. 換算南北半球各方格赤道傾角 α", "desc": "將走向角 θ [0°, 180°) 轉換為相對於赤道東西向之傾角 α_N, α_S [-90°, +90°)", "color": "#EBF8FF", "border": "#3182CE"},
         {"name": "5. 磁場手徵性與喬伊定律 (Joy's Law) 檢驗", "desc": "統計南北半球正/負傾角佔比與倍角加權主導傾角 α_mean_N, α_mean_S，檢驗科氏力螺旋偏態", "color": "#FEEBC8", "border": "#DD6B20"},
         {"name": "6. 緯度鏡像配對比較 (+φ vs -φ)", "desc": "對比相同絕對緯度帶 |φ| (如 +20° vs -20°) 之活躍方格數、密度與局部不對稱指數", "color": "#FEEBC8", "border": "#DD6B20"},
-        {"name": "7. 繪製雙向極座標玫瑰圖與鏡像蝴蝶圖", "desc": "輸出鏡像配對 CSV 至 Result/，並保存極座標玫瑰圖與蝴蝶對比圖至 result.image/", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
+        {"name": "7. 繪製雙向極座標玫瑰圖與鏡像蝴蝶圖", "desc": "輸出鏡像配對 CSV 至 analyze.export/analyze.data/，並保存極座標玫瑰圖與蝴蝶對比圖至 analyze.export/analyze.image/", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
     ]
     draw_logic_png("專項分析三：南北半球對稱性與手徵性分析邏輯流程圖", steps_3, [
         os.path.join(instruction_dir, "logic_3_hemispheric_asymmetry.png"),
-        os.path.join(image_dir, "logic_3_hemispheric_asymmetry.png"),
-        os.path.join(alt_image_dir, "logic_3_hemispheric_asymmetry.png")
+        os.path.join(image_dir, "logic_3_hemispheric_asymmetry.png")
     ])
 
 
-def run_all_post_analyses(csv_path: str = None, show_gui: bool = False):
-    """執行全部後處理分析並產出數據與圖表"""
+def run_all_post_analyses(csv_path: Optional[str] = None, 
+                          export_dir: Optional[str] = None, 
+                          show_gui: bool = False):
+    """執行全部後處理分析並產出數據與圖表至 【Analyze】/analyze.export/"""
+    if export_dir is None:
+        export_dir = _DEFAULT_ANALYZE_EXPORT
+    
+    data_dir = os.path.join(export_dir, "analyze.data")
+    image_dir = os.path.join(export_dir, "analyze.image")
+    os.makedirs(data_dir, exist_ok=True)
+    os.makedirs(image_dir, exist_ok=True)
+
     if csv_path is None:
-        csv_files = glob.glob("./export/*_features.csv")
+        csv_files = glob.glob(os.path.join(_DEFAULT_PROCESS_DATA, "*_features.csv"))
         if not csv_files:
-            raise FileNotFoundError("在 ./export/ 資料夾中找不到任何 *_features.csv 檔案！")
+            csv_files = glob.glob(os.path.join(_PROJECT_ROOT, "【Process】", "process.export", "*_features.csv"))
+        if not csv_files:
+            csv_files = glob.glob(os.path.join(_PROJECT_ROOT, "export", "*_features.csv"))
+        if not csv_files:
+            raise FileNotFoundError(f"在 {_DEFAULT_PROCESS_DATA} 中找不到任何 *_features.csv 檔案！")
         csv_path = csv_files[0]
 
     print("=" * 72)
-    print(f"  啟動太陽 H-alpha CSV 後處理專項分析管線 (輸入: {csv_path})")
+    print(f"  啟動太陽 H-alpha CSV 後處理專項分析管線")
+    print(f"  輸入特徵檔: {csv_path}")
+    print(f"  輸出資料夾: {export_dir}")
     print("=" * 72)
 
     # 1. 生成邏輯流程圖 PNG
-    generate_all_analysis_logic_diagrams()
-    print("[邏輯圖] 已生成三大分析邏輯流程圖 PNG 至 instruction/ 與 result.image/")
+    generate_all_analysis_logic_diagrams(image_dir=image_dir)
+    print(f"[邏輯圖] 已生成分析邏輯流程圖 PNG 至: {image_dir}")
 
     # 2. 執行專項分析一：緯度對方向與數量密度
-    ana1 = LatitudeOrientationAnalyzer(csv_path)
+    ana1 = LatitudeOrientationAnalyzer(csv_path, result_dir=data_dir, image_dir=image_dir)
     res1 = ana1.run_analysis()
     csv1 = ana1.export_csv(res1)
     img1 = ana1.plot_results(res1, show_gui=show_gui)
 
     # 3. 執行專項分析二：緯度對亮度與相空間結構分流
-    ana2 = LatitudeIntensityAnalyzer(csv_path)
+    ana2 = LatitudeIntensityAnalyzer(csv_path, result_dir=data_dir, image_dir=image_dir)
     res2 = ana2.run_analysis()
     csv2 = ana2.export_csv(res2)
     img2 = ana2.plot_results(res2, show_gui=show_gui)
 
     # 4. 執行專項分析三：南北半球對稱性與手徵性
-    ana3 = HemisphericAsymmetryAnalyzer(csv_path)
+    ana3 = HemisphericAsymmetryAnalyzer(csv_path, result_dir=data_dir, image_dir=image_dir)
     res3 = ana3.run_analysis()
     csv3 = ana3.export_csv(res3)
     img3 = ana3.plot_results(res3, show_gui=show_gui)
 
     # 5. 執行二維展開日面拓撲圖
-    ana4 = HeliographicTopologyAnalyzer(csv_path)
+    ana4 = HeliographicTopologyAnalyzer(csv_path, result_dir=data_dir, image_dir=image_dir)
     img4 = ana4.plot_topology_map(show_gui=show_gui)
 
-    # 6. 撰寫結構化分析總結報告至 Result/analysis_summary_report.md
+    # 6. 撰寫結構化分析總結報告至 analyze.export/analyze.data/
     base_name = ana1.base_name
-    report_path = os.path.join("./Result", f"{base_name}_analysis_report.md")
+    report_path = os.path.join(data_dir, f"{base_name}_analysis_report.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(f"# 全日面太陽 H-alpha 特徵數據後處理分析報告 ({base_name})\n\n")
         f.write("## 一、 專項分析一：緯度對方向與活躍密度分析結果\n")

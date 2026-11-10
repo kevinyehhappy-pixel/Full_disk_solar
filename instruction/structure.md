@@ -4,31 +4,26 @@
 
 ---
 
-## 一、 四大核心 Classes 職責與設計說明
+## 一、 系統目錄結構與四大模組職責說明
 
-整個專案架構解耦為四個獨立且高內聚的模組類別，分別存放於對應的 `.py` 檔案中：
+整個專案架構解耦為 `【Process】`（核心運算與定標輸出）與 `【Analyze】`（事後專項統計與視覺化導出）兩大系統：
 
 ```
 whole_disk_ana/
-├── class1_ingestor.py     # Class 1: SolarSunPyIngestor (資料檢索、全日面篩選與匯入)
-├── class2_calibrator.py   # Class 2: SolarDiskCalibrator (FITS 天文定標、CLAHE 預處理與方格切割)
-├── class3_analyze.py      # Class 3: SolarStructureTensorAnalyzer (Sobel 梯度與結構張量分析)
-├── class4_export.py       # Class 4: SolarResultExporter (數據儲存、疊加渲染與 plt 可視化)
-├── main.py                # 系統執行主入口 (管線串接整合)
-├── instruction/           # 演算法與架構文件 (含各 class 完整邏輯圖 PNG)
-│   ├── structure.md
-│   ├── FITS.md
-│   ├── CLAHE.md
-│   ├── SLOPE.md
-│   ├── class1_logic.png
-│   ├── class2_logic.png
-│   ├── class3_logic.png
-│   └── class4_logic.png
-└── export/                # 輸出成果目錄
-    ├── *_features.csv     # 結構化多維方格特徵表
-    ├── *_features.npy     # (N, 9) 二進位矩陣
-    └── export.image/      # 疊加可視化影像輸出資料夾
-        └── *_overlay.png  # 全盤走向-相關性向量疊加圖
+├── 【Process】/
+│   ├── process.code/          # 四大核心處理代碼 (Class 1 ~ 4 & main.py)
+│   └── process.export/        # 核心張量特徵與影像輸出
+│       ├── process.data/      # *_features.csv, *_features.npy
+│       └── process.image/     # *_overlay.png, *_comparison.png
+├── 【Analyze】/
+│   ├── analyze.code/          # 事後統計分析與圖表代碼 (專項分析 1~4、風花圖等)
+│   └── analyze.export/        # 事後統計分析專屬輸出
+│       ├── analyze.data/      # 專項分析報表 CSV, *_analysis_report.md
+│       ├── analyze.image/     # 專項分析圖表 1~4 PNG, 演算法邏輯圖 PNG
+│       └── direction_analysis/# 風花圖 PNG, CSV, 統計摘要 txt
+├── drive/                     # Google Drive 備份與上傳模組
+├── fits_cache/                # 本地 FITS 暫存快取
+└── instruction/               # 演算法與架構文件 (含 FITS 定標、CLAHE、SLOPE 等說明)
 ```
 
 ---
@@ -68,13 +63,13 @@ whole_disk_ana/
 
 ### 4. `SolarResultExporter` (`class4_export.py`)
 * **主要職責**：
-  * **多維特徵導出**：將全盤方格資訊打包為 $(N, 9)$ 數值陣列，分別導出為 `.npy` 二進位檔與 `.csv` 逗號分隔檔至 `export/` 目錄。
+  * **多維特徵導出**：將全盤方格資訊打包為 $(N, 10)$ 數值陣列，分別導出為 `.npy` 二進位檔與 `.csv` 逗號分隔檔至 `【Process】/process.export/process.data/` 目錄。
   * **動態向量疊加渲染**：
     * 向量長度隨同調度動態調變：$L \propto C^{0.4}$。
     * 向量顏色依走向角 $\theta$ 對應 HSV 色彩空間進行全色譜映射。
     * 在影像上疊加日輪邊界綠色圓圈與方格中心點標註。
   * **儲存與互動顯示**：
-    * 將渲染疊加圖存入 `export/export.image/{base_name}_overlay.png`。
+    * 將渲染疊加圖存入 `【Process】/process.export/process.image/{base_name}_overlay.png`。
     * 每次管線執行完畢後，自動呼叫 `matplotlib.pyplot` 彈出對比視窗，直觀呈現分析成果。
 
 ---
@@ -102,29 +97,34 @@ whole_disk_ana/
   • Sobel 計算 Ix, Iy
   • 逐方格計算結構張量 Jxx, Jyy, Jxy
   • 求解特徵值 -> 萃取主導走向 θ 與同調度 C
-  • 換算日面經緯度，整合出 (N, 9) 特徵矩陣
+  • 換算日面經緯度，整合出 (N, 10) 特徵矩陣
         │
         ▼ (步驟 4)
 【Class 4: SolarResultExporter】
-  • 寫入 export/*.csv 與 export/*.npy
+  • 寫入 【Process】/process.export/process.data/*.csv 與 *.npy
   • 渲染角度-同調度彩色對稱線段
-  • 輸出影像至 export/export.image/*.png
+  • 輸出影像至 【Process】/process.export/process.image/*.png
   • 呼叫 plt.show() 展示可視化檢驗視窗
+        │
+        ▼ (步驟 5)
+【Analyze 後處理專項分析模組】
+  • 輸出專項分析報告與統計圖表至 【Analyze】/analyze.export/analyze.data/ 與 analyze.image/
+  • 輸出風花圖至 【Analyze】/analyze.export/direction_analysis/
 ```
 
 ---
 
-## 三、 特徵資料表定義表 `(N, 9)`
+## 三、 特徵資料表定義表 `(N, 10)`
 
 | 索引 | 欄位名稱 | 物理意義 | 單位與數值範圍 |
 | :--- | :--- | :--- | :--- |
 | `[:, 0]` | `grid_id` | 方格唯一編號 | $0 \sim N-1$ |
 | `[:, 1]` | `center_x` | 影像像平面中心 X 座標 | 像素 (pixel) |
 | `[:, 2]` | `center_y` | 影像像平面中心 Y 座標 | 像素 (pixel) |
-| `[:, 3]` | `patch_size` | 切割方格邊長 | 像素 (32 或 40) |
+| `[:, 3]` | `patch_size` | 切割方格邊長 | 像素 (32 或 16) |
 | `[:, 4]` | `mean_intensity` | 方格原始平均強度 | 灰階數值 $[0, 255]$ |
-| `[:, 5]` | `orientation_deg` | 色球纖維切線走向角 $\theta$ | 度數 $[0, 180)$ |
+| `[:, 5]` | `image_orientation_deg` | 色球纖維切線走向角 $\theta$ | 度數 $[0, 180)$ |
 | `[:, 6]` | `coherence` | 纖維各向異性同調度 $C$ | 數值 $[0, 1]$ (越大代表走向越單一清晰) |
 | `[:, 7]` | `solar_lat` | 近似日面緯度 | 度數 $[-90, +90]$ |
 | `[:, 8]` | `solar_lon` | 近似日面經度 | 度數 $[-90, +90]$ |
-
+| `[:, 9]` | `surface_azimuth_deg` | 球面真實局部方位角 (正北為 0°) | 度數 $[0, 180)$ |

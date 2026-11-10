@@ -46,15 +46,20 @@ def resolve_smart_path(input_path: str, prefer_drive_dir: bool = False) -> str:
     if os.path.exists(input_path):
         return os.path.abspath(input_path)
 
-    # 2. 檢查 drive/ 資料夾內
-    path_in_drive = os.path.join(CURRENT_FILE_DIR, os.path.basename(input_path))
-    if os.path.exists(path_in_drive):
-        return path_in_drive
+    # 2. 檢查 drive/ 資料夾內 (含 Windows 隱藏副檔名常導致的 .json.json 防呆)
+    candidates = [os.path.basename(input_path)]
+    if input_path.endswith(".json"):
+        candidates.append(os.path.basename(input_path) + ".json")
+    elif input_path.endswith(".json.json"):
+        candidates.append(os.path.basename(input_path)[:-5])
 
-    # 3. 檢查專案根目錄
-    path_in_root = os.path.join(PROJECT_ROOT_DIR, input_path)
-    if os.path.exists(path_in_root):
-        return path_in_root
+    for c in candidates:
+        cand_in_drive = os.path.join(CURRENT_FILE_DIR, c)
+        if os.path.exists(cand_in_drive):
+            return cand_in_drive
+        cand_in_root = os.path.join(PROJECT_ROOT_DIR, c)
+        if os.path.exists(cand_in_root):
+            return cand_in_root
 
     # 若尚未建立，依情境預設返回 drive/ 內或專案根目錄
     if prefer_drive_dir:
@@ -73,11 +78,14 @@ class GoogleDriveUploader:
         """
         if not GOOGLE_PACKAGES_AVAILABLE:
             raise ImportError(
-                "\n[錯誤] 尚未安裝 Google Drive API 官方套件！\n"
-                "請在終端機中執行以下指令進行安裝：\n"
-                "    pip install google-api-python-client google-auth-oauthlib google-auth-httplib2\n"
-                "或安裝 requirements:\n"
-                "    pip install -r drive/requirements.txt\n"
+                f"\n[錯誤] 當前 Python 環境尚未安裝 Google Drive API 官方套件！\n"
+                f"當前使用的 Python 直譯器：{sys.executable}\n"
+                f"【解決方案】\n"
+                f"1. （推薦）切換至已完整配置之 Python 3.12 環境：\n"
+                f"   & 'C:\\Users\\kevin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe' drive/gdrive_uploader.py\n"
+                f"   或在 VS Code 按下 Ctrl+Shift+P -> 選擇 'Python: Select Interpreter' -> 切換為 Python 3.12。\n\n"
+                f"2. 若堅持使用當前 Python 3.14，請為其安裝套件：\n"
+                f"   & '{sys.executable}' -m pip install -r drive/requirements.txt\n"
             )
 
         # 智慧解析憑證與 Token 路徑

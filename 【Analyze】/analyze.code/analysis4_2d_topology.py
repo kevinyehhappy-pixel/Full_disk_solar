@@ -20,21 +20,24 @@ from scipy.interpolate import griddata
 plt.rcParams["font.sans-serif"] = ["Microsoft JhengHei", "SimHei", "Arial Unicode MS", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_DEFAULT_RESULT_DIR = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.export", "analyze.data")
+_DEFAULT_IMAGE_DIR = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.export", "analyze.image")
+
 
 class HeliographicTopologyAnalyzer:
     def __init__(self, csv_path: str,
-                 result_dir: str = "./Result",
-                 image_dir: str = "./export/result.image",
+                 result_dir: str = None,
+                 image_dir: str = None,
                  coherence_min: float = 0.025):
         self.csv_path = csv_path
-        self.result_dir = result_dir
-        self.image_dir = image_dir
-        self.alt_image_dir = os.path.join(self.result_dir, "result.image")
+        self.result_dir = result_dir if result_dir is not None else _DEFAULT_RESULT_DIR
+        self.image_dir = image_dir if image_dir is not None else _DEFAULT_IMAGE_DIR
         self.coherence_min = coherence_min
 
         os.makedirs(self.result_dir, exist_ok=True)
         os.makedirs(self.image_dir, exist_ok=True)
-        os.makedirs(self.alt_image_dir, exist_ok=True)
 
         self.base_name = os.path.splitext(os.path.basename(csv_path))[0].replace("_features", "")
         self.data = np.loadtxt(self.csv_path, delimiter=",", skiprows=1)
@@ -129,7 +132,6 @@ class HeliographicTopologyAnalyzer:
 
         img_out = os.path.join(self.image_dir, f"{self.base_name}_4_2d_heliographic_topology.png")
         plt.savefig(img_out, dpi=300, bbox_inches="tight")
-        shutil.copy2(img_out, os.path.join(self.alt_image_dir, f"{self.base_name}_4_2d_heliographic_topology.png"))
         print(f"[二維拓撲圖] 已儲存至: {img_out}")
 
         if show_gui:
@@ -141,6 +143,9 @@ class HeliographicTopologyAnalyzer:
 
 
 if __name__ == "__main__":
-    topo = HeliographicTopologyAnalyzer("./export/20240510120222Th_features.csv")
+    default_csv = os.path.join(_PROJECT_ROOT, "【Process】", "process.export", "process.data", "20240510120222Th_features.csv")
+    if not os.path.exists(default_csv):
+        default_csv = "./export/20240510120222Th_features.csv"
+    topo = HeliographicTopologyAnalyzer(default_csv)
     topo.plot_topology_map(show_gui=False)
 

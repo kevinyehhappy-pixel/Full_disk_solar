@@ -83,11 +83,12 @@ draw_flowchart("Class 1: SolarSunPyIngestor 邏輯架構圖", steps_c1, "class1_
 steps_c2 = [
     {"name": "1. 接收標準灰階影像與 FITS 中繼資料", "desc": "接收 gray_img 與 meta_dict (含 CRPIX, RSUN_OBS, CDELT)", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
     {"name": "2. 雙軌日輪幾何定標判定", "desc": "優先檢查 FITS Header 中繼標頭是否具備完整天文定標", "color": "#FEFCBF", "border": "#D69E2E", "shape": "round"},
-    {"name": "3A. FITS 原生天文定標 (優先)", "desc": "xc = CRPIX1-1, yc = H-CRPIX2, 半徑 R = RSUN_OBS / CDELT1", "color": "#C6F6D5", "border": "#38A169"},
+    {"name": "3A. FITS 原生天文定標 (優先)", "desc": "xc = CRPIX1-1, yc = H-CRPIX2, 半徑 R = RSUN_OBS / CDELT1, s0 = R_sun/R (km/px)", "color": "#C6F6D5", "border": "#38A169"},
     {"name": "3B. 影像形態學與幾何矩 (回退)", "desc": "遮蔽 Logo -> 門檻二值化 -> 開閉運算 -> cv2.moments 擬合 (xc, yc, R)", "color": "#EDF2F7", "border": "#718096"},
     {"name": "4. CLAHE 局部自適應直方圖均衡化", "desc": "clipLimit=3.0, tileGrid=(8,8)，壓抑全盤邊緣昏暗，凸顯暗纖維微弱反差", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "5. 高斯模糊降噪處理", "desc": "3x3 卷積核 (sigma=1.0) 平滑高頻感測器顆粒噪點", "color": "#EBF8FF", "border": "#3182CE"},
-    {"name": "6. 有效日面方格切割 (Patch Slicing)", "desc": "在 dist <= 0.92 * R 範圍內以 patch_size 步長切割方格，排除邊緣白環與太空", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
+    {"name": "6. 有效日面方格切割 (Patch Slicing)", "desc": "在 dist <= 0.92 * R 範圍內以 patch_size 步長切割方格，排除邊緣白環與太空", "color": "#EBF8FF", "border": "#3182CE"},
+    {"name": "7. 球面幾何透視校正與真實長寬記錄 (km)", "desc": "依方格中心 (phi, lam) 計算 W_km = s0*dx*sec(lam), H_km = s0*dy*sec(phi)，記錄長寬與長寬比", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
 ]
 draw_flowchart("Class 2: SolarDiskCalibrator 邏輯架構圖", steps_c2, "class2_logic.png")
 
@@ -106,11 +107,11 @@ draw_flowchart("Class 3: SolarStructureTensorAnalyzer 邏輯架構圖", steps_c3
 # ==================== Class 4 邏輯圖 ====================
 steps_c4 = [
     {"name": "1. 接收 (N, 9) 特徵矩陣與增強影像", "desc": "解析方格座標、走向角 θ、同調度 C 與日輪幾何參數", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
-    {"name": "2. 輸出結構化檔案至 export/ 目錄", "desc": "儲存 NumPy 二進位 (*_features.npy) 與 CSV 試算表 (*_features.csv)", "color": "#EBF8FF", "border": "#3182CE"},
+    {"name": "2. 輸出結構化檔案至 process.export/process.data/ 目錄", "desc": "儲存 NumPy 二進位 (*_features.npy) 與 CSV 試算表 (*_features.csv)", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "3. 建立三通道視覺化畫布與日輪標註", "desc": "轉為 BGR 畫布，並以綠色圓圈標註定標日肢 (xc, yc, R)", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "4. 門檻過濾與向量長度動態縮放", "desc": "排除 C < 0.025 之混亂區域；線段長度調變 L 正比於 C^0.4", "color": "#FEFCBF", "border": "#D69E2E"},
     {"name": "5. HSV 走向色彩映射與向量疊加繪製", "desc": "角度 θ 對應 HSV 全色相 Hue；繪製抗鋸齒彩色走向線段與中心紅點", "color": "#FEEBC8", "border": "#DD6B20"},
-    {"name": "6. 影像存檔至 export/export.image/", "desc": "保存全盤走向疊加圖 (*_overlay.png) 與成果對照圖", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
+    {"name": "6. 影像存檔至 process.export/process.image/", "desc": "保存全盤走向疊加圖 (*_overlay.png) 與成果對照圖", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
     {"name": "7. Matplotlib 對比檢驗視窗呈現", "desc": "呼叫 plt.show() 直觀顯示 CLAHE 增強盤面與走向向量疊加成果", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
 ]
 draw_flowchart("Class 4: SolarResultExporter 邏輯架構圖", steps_c4, "class4_logic.png")

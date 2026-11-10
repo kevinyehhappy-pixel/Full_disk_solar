@@ -1,0 +1,25 @@
+# Google OAuth Credentials & Tokens (CRITICAL SECURITY)
+drive/credentials.json
+drive/credentials.json.json
+drive/token.json
+credentials.json
+token.json
+*.json.json
+
+# FITS astronomical data cache
+fits_cache/
+*.fits
+*.fits.fz
+
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE configuration
+.vscode/
+.idea/
+
+# OS generated files
+Thumbs.db
+Desktop.ini

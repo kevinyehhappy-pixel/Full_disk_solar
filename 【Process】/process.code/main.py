@@ -2,13 +2,15 @@
 main.py
 全日面太陽 H-alpha 紋理與走向分析管線執行主入口 (Solar Whole-Disk Pipeline Runner)
 整合 Class 1 至 Class 4，支援 SunPy 線上檢索或本機 FITS 處理，
-自動導出特徵至 export/ 與渲染圖至 export/export.image/，並以 matplotlib 呈現成果。
+自動導出特徵至 【Process】/process.export/ 與事後統計至 【Analyze】/analyze.export/，並以 matplotlib 呈現成果。
 """
 
 import os
 import sys
 import argparse
+from typing import Optional
 import numpy as np
+
 # 確保可正確匯入 【Analyze】 分析模組 (含已移轉之 direction_histogram)
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
@@ -33,7 +35,7 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
                  clip_limit: float = 3.0,
                  disk_margin: float = 0.92,
                  coherence_min: float = 0.025,
-                 export_dir: str = "./export",
+                 export_dir: Optional[str] = None,
                  show_gui: bool = True):
     """
     執行完整端到端太陽紋理與走向分析管線
@@ -41,6 +43,11 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     print("=" * 70)
     print("  全日面太陽 H-alpha 紋理與走向分析管線 (Solar Whole-Disk Pipeline)")
     print("=" * 70)
+
+    # 規範目錄路徑
+    if export_dir is None:
+        export_dir = os.path.join(_PROJECT_ROOT, "【Process】", "process.export")
+    analyze_export_dir = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.export")
 
     # -------------------------------------------------------------
     # 步驟一：Class 1 - 數據檢索、全日面篩選與匯入
@@ -51,7 +58,7 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
         end_time=end_time,
         instrument=instrument,
         wavelength=wavelength,
-        download_dir="./fits_cache"
+        download_dir=os.path.join(_PROJECT_ROOT, "fits_cache")
     )
     gray_img, meta_dict = ingestor.get_processed_gray()
     base_name = f"solar_{instrument}_{start_time[:10].replace('-', '')}"
@@ -79,7 +86,9 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     print("\n>>> [模組三] 啟動 SolarStructureTensorAnalyzer...")
     analyzer = SolarStructureTensorAnalyzer(ksize=3)
     results_arr = analyzer.analyze(blurred_img, patches, geom)
-    hist_dir = os.path.join(export_dir, "direction_analysis")
+    
+    # 執行風花圖分析 (輸出至 【Analyze】/analyze.export/direction_analysis)
+    hist_dir = os.path.normpath(os.path.join(analyze_export_dir, "direction_analysis"))
     print(f"[方向統計] 輸出位置：{os.path.abspath(hist_dir)}")
     export_direction_histogram(
         results_arr,
@@ -90,7 +99,7 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     )
 
     # -------------------------------------------------------------
-    # 步驟四：Class 4 - 數據輸出、向量疊加渲染與可視化檢驗
+    # 步驟四：Class 4 - 數據輸出、向量疊加渲染與可視化檢驗 (【Process】/process.export)
     # -------------------------------------------------------------
     print("\n>>> [模組四] 啟動 SolarResultExporter...")
     exporter = SolarResultExporter(
@@ -106,11 +115,15 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     )
 
     # -------------------------------------------------------------
-    # 步驟五：Result 專項後處理分析 (緯度對方向、緯度對亮度、南北半球對稱性與二維拓撲圖)
+    # 步驟五：專項後處理分析 (輸出至 【Analyze】/analyze.export)
     # -------------------------------------------------------------
-    print("\n>>> [模組五] 啟動 CSV 專項統計分析 (Result & result.image)...")
+    print("\n>>> [模組五] 啟動專項統計分析 (【Analyze】/analyze.export)...")
     from run_all_results import run_all_post_analyses
-    post_outputs = run_all_post_analyses(csv_path=outputs["csv_path"], show_gui=show_gui)
+    post_outputs = run_all_post_analyses(
+        csv_path=outputs["csv_path"],
+        export_dir=analyze_export_dir,
+        show_gui=show_gui
+    )
     outputs["post_analysis"] = post_outputs
 
     print("\n" + "=" * 70)
@@ -131,6 +144,7 @@ if __name__ == "__main__":
     parser.add_argument("--end", type=str, default="2024-05-10 12:15:00", help="搜尋終點時間 (UTC)")
     parser.add_argument("--instrument", type=str, default="GONG", help="儀器名稱 (預設 GONG)")
     parser.add_argument("--patch-size", type=int, default=32, help="方格邊長 (預設 32)")
+    parser.add_argument("--export-dir", type=str, default=None, help="Process 輸出目錄 (預設 【Process】/process.export)")
     parser.add_argument("--no-gui", action="store_true", help="不開啟互動圖形視窗 (純背景執行)")
 
     args = parser.parse_args()
@@ -139,6 +153,6 @@ if __name__ == "__main__":
         end_time=args.end,
         instrument=args.instrument,
         patch_size=args.patch_size,
+        export_dir=args.export_dir,
         show_gui=not args.no_gui
     )
-

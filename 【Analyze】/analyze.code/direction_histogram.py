@@ -18,14 +18,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_DEFAULT_OUTPUT_DIR = os.path.join(_PROJECT_ROOT, "【Analyze】", "analyze.export", "direction_analysis")
+
+
 def export_direction_histogram(
     results_arr: np.ndarray,
-    output_dir: str = "./export/direction_analysis",
+    output_dir: str | None = None,
     base_name: str = "solar",
     coherence_min: float = 0.1,
     bin_width: float = 10.0,
     latitude_width: float = 10.0,
 ) -> dict[str, Any]:
+    if output_dir is None:
+        output_dir = _DEFAULT_OUTPUT_DIR
     """Export direction wind roses by latitude bands.
 
     Parameters

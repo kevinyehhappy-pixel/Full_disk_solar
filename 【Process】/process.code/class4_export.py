@@ -1,8 +1,8 @@
 """
 class4_export.py
 模組四：數據輸出與渲染 (SolarResultExporter)
-將結構張量特徵矩陣導出為 .npy 與 .csv 至 export/ 目錄；
-將分析完成之走向-同調度疊加圖儲存於 export/export.image/ 目錄；
+將結構張量特徵矩陣導出為 .npy 與 .csv 至 【Process】/process.export/process.data/ 目錄；
+將分析完成之走向-同調度疊加圖儲存於 【Process】/process.export/process.image/ 目錄；
 並於每次運行完畢後呼叫 matplotlib (plt.show) 直觀顯示全盤分析檢驗視窗。
 """
 
@@ -12,32 +12,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Tuple, Optional
 
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_DEFAULT_EXPORT_DIR = os.path.join(_PROJECT_ROOT, "【Process】", "process.export")
+
 
 class SolarResultExporter:
-    def __init__(self, export_dir: str = "./export", 
+    def __init__(self, export_dir: Optional[str] = None, 
                  coherence_min_display: float = 0.025,
                  line_length_ratio: float = 0.95):
         """
         全日面分析成果導出與渲染器
-        :param export_dir: 基礎導出目錄 (預設 ./export)
+        :param export_dir: 基礎導出目錄 (預設 【Process】/process.export)
         :param coherence_min_display: 向量可視化之最低同調度門檻 (過濾無方向噪點)
         :param line_length_ratio: 繪圖最大線長相對於方格邊長之比例
         """
-        self.export_dir = export_dir
-        self.image_export_dir = os.path.join(self.export_dir, "export.image")
+        if export_dir is None:
+            export_dir = _DEFAULT_EXPORT_DIR
+
+        self.export_dir = os.path.abspath(export_dir)
+        self.data_export_dir = os.path.join(self.export_dir, "process.data")
+        self.image_export_dir = os.path.join(self.export_dir, "process.image")
         self.coherence_min_display = coherence_min_display
         self.line_length_ratio = line_length_ratio
 
         # 確保目標資料夾存在
-        os.makedirs(self.export_dir, exist_ok=True)
+        os.makedirs(self.data_export_dir, exist_ok=True)
         os.makedirs(self.image_export_dir, exist_ok=True)
 
     def export_data(self, results_arr: np.ndarray, base_name: str) -> Tuple[str, str]:
         """
-        導出 (N, 10) 特徵矩陣至 export/ 目錄下的 .npy 與 .csv 檔案
+        導出 (N, 10) 特徵矩陣至 process.export/process.data/ 目錄下的 .npy 與 .csv 檔案
         """
-        npy_path = os.path.join(self.export_dir, f"{base_name}_features.npy")
-        csv_path = os.path.join(self.export_dir, f"{base_name}_features.csv")
+        npy_path = os.path.join(self.data_export_dir, f"{base_name}_features.npy")
+        csv_path = os.path.join(self.data_export_dir, f"{base_name}_features.csv")
 
         # 1. 儲存 NumPy 二進位陣列
         np.save(npy_path, results_arr)
@@ -58,7 +66,7 @@ class SolarResultExporter:
     def render_overlay(self, enhanced_img: np.ndarray, results_arr: np.ndarray, 
                        geom: Tuple[float, float, float], base_name: str) -> Tuple[np.ndarray, str]:
         """
-        在增強影像上繪製纖維走向與同調度疊加圖，並儲存於 export/export.image/ 目錄
+        在增強影像上繪製纖維走向與同調度疊加圖，並儲存於 process.export/process.image/ 目錄
         :return: (overlay_bgr, out_img_path)
         """
         xc, yc, R = geom
@@ -98,7 +106,7 @@ class SolarResultExporter:
         # 繪製定標日輪擬合輪廓圓 (綠色圓圈)
         cv2.circle(overlay, (int(np.round(xc)), int(np.round(yc))), int(np.round(R)), (0, 255, 0), 2)
 
-        # 儲存影像至 export/export.image/ 目錄
+        # 儲存影像至 process.export/process.image/ 目錄
         out_img_path = os.path.join(self.image_export_dir, f"{base_name}_overlay.png")
         cv2.imwrite(out_img_path, overlay)
         print(f"[Class 4 渲染] 成功繪製 {rendered_count} 條有效走向向量！")
