@@ -2,6 +2,7 @@
 main.py
 全日面太陽 H-alpha 紋理與走向分析管線執行主入口 (Solar Whole-Disk Pipeline Runner)
 整合 Class 1 至 Class 4，支援 SunPy 線上檢索或本機 FITS 處理，
+具備四向 16px 滑動重疊切割 (50% 空間過取樣) 與自適應四叉樹 16px 細分重算機制，
 自動導出特徵至 【Process】/process.export/ 與事後統計至 【Analyze】/analyze.export/，並以 matplotlib 呈現成果。
 """
 
@@ -32,13 +33,19 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
                  instrument: str = "GONG",
                  wavelength: float = 6562.8,
                  patch_size: int = 32,
+                 stride: int = 16,
                  clip_limit: float = 3.0,
                  disk_margin: float = 0.92,
                  coherence_min: float = 0.025,
                  export_dir: Optional[str] = None,
+                 enable_refinement: bool = True,
                  show_gui: bool = True):
     """
     執行完整端到端太陽紋理與走向分析管線
+    :param patch_size: 基礎方格邊長 (預設 32 px)
+    :param stride: 滑動步長 (預設 16 px，向四面移動 16px 達成 50% 空間重疊過取樣)
+    :param coherence_min: 同調度篩選門檻 (預設 0.025，低於此值進入 16px 細分重算)
+    :param enable_refinement: 是否啟用 16px 自適應四叉樹細分拯救機制 (預設 True)
     """
     print("=" * 70)
     print("  全日面太陽 H-alpha 紋理與走向分析管線 (Solar Whole-Disk Pipeline)")
@@ -69,11 +76,12 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
         base_name = f_base
 
     # -------------------------------------------------------------
-    # 步驟二：Class 2 - FITS 天文定標、CLAHE 預處理與網格切割
+    # 步驟二：Class 2 - FITS 天文定標、CLAHE 預處理與 50% 重疊網格切割 (更動 2)
     # -------------------------------------------------------------
     print("\n>>> [模組二] 啟動 SolarDiskCalibrator...")
     calibrator = SolarDiskCalibrator(
         patch_size=patch_size,
+        stride=stride,
         clip_limit=clip_limit,
         tile_grid_size=(8, 8),
         disk_margin_ratio=disk_margin
@@ -81,11 +89,20 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     enhanced_img, blurred_img, geom, patches = calibrator.process(gray_img, meta_dict=meta_dict)
 
     # -------------------------------------------------------------
-    # 步驟三：Class 3 - Sobel 梯度與二階結構張量特徵求解
+    # 步驟三：Class 3 - Sobel 梯度與自適應多尺度結構張量特徵求解 (更動 3)
     # -------------------------------------------------------------
-    print("\n>>> [模組三] 啟動 SolarStructureTensorAnalyzer...")
+    print("\n>>> [模組三] 啟動 SolarStructureTensorAnalyzer (多尺度自適應求解)...")
     analyzer = SolarStructureTensorAnalyzer(ksize=3)
-    results_arr = analyzer.analyze(blurred_img, patches, geom)
+    results_arr = analyzer.analyze(
+        blurred_img=blurred_img,
+        patches=patches,
+        geom=geom,
+        calibrator=calibrator,
+        gray_img=gray_img,
+        enhanced_img=enhanced_img,
+        min_coherence=coherence_min,
+        enable_refinement=enable_refinement
+    )
     
     # 執行風花圖分析 (輸出至 【Analyze】/analyze.export/direction_analysis)
     hist_dir = os.path.normpath(os.path.join(analyze_export_dir, "direction_analysis"))
@@ -128,7 +145,7 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
 
     print("\n" + "=" * 70)
     print("  [完成] 全日面太陽分析與後處理統計管線運行成功！")
-    print(f"  有效方格數: {len(results_arr)} 筆")
+    print(f"  有效特徵方格數: {len(results_arr)} 筆")
     print(f"  .npy 數據檔案: {outputs['npy_path']}")
     print(f"  .csv 特徵清單: {outputs['csv_path']}")
     print(f"  疊加渲染影像: {outputs['overlay_path']}")
@@ -143,8 +160,11 @@ if __name__ == "__main__":
     parser.add_argument("--start", type=str, default="2024-05-10 12:00:00", help="搜尋起點時間 (UTC)")
     parser.add_argument("--end", type=str, default="2024-05-10 12:15:00", help="搜尋終點時間 (UTC)")
     parser.add_argument("--instrument", type=str, default="GONG", help="儀器名稱 (預設 GONG)")
-    parser.add_argument("--patch-size", type=int, default=32, help="方格邊長 (預設 32)")
+    parser.add_argument("--patch-size", type=int, default=32, help="基礎方格邊長 (預設 32)")
+    parser.add_argument("--stride", type=int, default=16, help="空間滑動步長 (預設 16, 達成 50% 重疊)")
+    parser.add_argument("--coherence-min", type=float, default=0.025, help="同調度篩選門檻 (預設 0.025)")
     parser.add_argument("--export-dir", type=str, default=None, help="Process 輸出目錄 (預設 【Process】/process.export)")
+    parser.add_argument("--no-refinement", action="store_true", help="不啟用 16px 自適應細分重算")
     parser.add_argument("--no-gui", action="store_true", help="不開啟互動圖形視窗 (純背景執行)")
 
     args = parser.parse_args()
@@ -153,6 +173,9 @@ if __name__ == "__main__":
         end_time=args.end,
         instrument=args.instrument,
         patch_size=args.patch_size,
+        stride=args.stride,
+        coherence_min=args.coherence_min,
         export_dir=args.export_dir,
+        enable_refinement=not args.no_refinement,
         show_gui=not args.no_gui
     )
