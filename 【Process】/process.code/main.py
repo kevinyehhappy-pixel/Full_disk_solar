@@ -148,7 +148,10 @@ def run_pipeline(start_time: str = "2024-05-10 12:00:00",
     print(f"  有效特徵方格數: {len(results_arr)} 筆")
     print(f"  .npy 數據檔案: {outputs['npy_path']}")
     print(f"  .csv 特徵清單: {outputs['csv_path']}")
-    print(f"  疊加渲染影像: {outputs['overlay_path']}")
+    print(f"  走向疊加 (僅 32px): {outputs['overlay_32px_path']}")
+    print(f"  走向疊加 (僅 16px): {outputs['overlay_16px_path']}")
+    print(f"  走向疊加 (兩者合併): {outputs['overlay_combined_path']}")
+    print(f"  四面板對比檢驗圖: {outputs['comparison_path']}")
     print(f"  後處理統計報告: {post_outputs['report_path']}")
     print("=" * 70)
 
