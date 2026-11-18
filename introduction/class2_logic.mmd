@@ -1,0 +1,17 @@
+flowchart TD
+    A["1. 接收標準灰階影像 gray_img 與中繼字典 meta_dict"] --> B{"2. 雙軌日輪幾何定標判定<br/>(FITS Header 中繼資料是否完整)?"}
+    B -- "是 (優先策略)" --> C1["3A. FITS WCS 原生天文定標<br/>• 日心 xc = CRPIX1 - 1, yc = H - CRPIX2<br/>• 像素半徑 R = RSUN_OBS / CDELT1<br/>• 基準比例尺 s0 = R_sun / R (km/px)"]
+    B -- "否 (回退策略)" --> C2["3B. 影像形態學與幾何矩擬合<br/>• 遮蔽商標 -> 門檻二值化 -> 形態學閉合<br/>• cv2.moments 輪廓擬合求解 (xc, yc, R)"]
+    C1 --> D["4. CLAHE 局部自適應直方圖等化<br/>(clipLimit=3.0, grid=8x8 消除邊緣昏暗 Limb Darkening)"]
+    C2 --> D
+    D --> E["5. 高斯模糊降噪平滑<br/>(3x3 卷積核, sigma=1.0 抑制高頻顆粒噪聲)"]
+    E --> F["6. 四向 16px 滑動重疊切割 (50% Overlap)<br/>• patch_size=32, stride=16<br/>• 在 dist <= 0.92*R 內生成 8,411 個方格，消除邊界截斷盲區"]
+    F --> G["7. 球面正交投影透視幾何校正<br/>• 計算真實物理長度、寬度 (km) 與面積 (km²)"]
+    G --> Output["輸出增強影像、平滑影像、日輪幾何 (xc, yc, R) 與 8,411 個方格"]
+    
+    subgraph Refinement["自適應四叉樹細分器 (Quadtree Refinement)"]
+        H["接收 Class 3 低同調度方格清單"] --> I["四叉樹子切割: 每個 32x32 切割為 4 個 16x16 方格<br/>(左上、右上、左下、右下)"]
+        I --> J["座標去重與邊界距離檢核"]
+        J --> K["重新計算各 16x16 方格真實球面尺度與經緯度"]
+        K --> SubOutput["輸出 6,589 個去重後 16x16 子方格供 Class 3 拯救重算"]
+    end

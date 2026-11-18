@@ -1,6 +1,7 @@
 """
 generate_logic_diagrams.py
-繪製 Class 1 至 Class 4 的完整架構邏輯圖，並儲存為高解析度 PNG 檔案於 instruction/ 資料夾中。
+繪製 Class 1 至 Class 4 的最新架構邏輯圖 (含 50% 滑動重疊與 16px 自適應四叉樹細分機制)，
+並儲存為高解析度 PNG 檔案於 instruction/ 資料夾中。
 """
 
 import os
@@ -11,21 +12,24 @@ import matplotlib.patches as patches
 plt.rcParams['font.sans-serif'] = ['Microsoft JhengHei', 'SimHei', 'Arial Unicode MS', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
-os.makedirs("instruction", exist_ok=True)
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(_CURRENT_DIR))
+_INSTRUCTION_DIR = os.path.join(_PROJECT_ROOT, "instruction")
+os.makedirs(_INSTRUCTION_DIR, exist_ok=True)
 
-def draw_flowchart(title, steps, filename, figsize=(9, 11)):
+def draw_flowchart(title, steps, filename, figsize=(9.5, 12.5)):
     fig, ax = plt.subplots(figsize=figsize, dpi=300)
     ax.set_xlim(0, 10)
-    ax.set_ylim(0, len(steps) * 1.5 + 1.5)
+    ax.set_ylim(0, len(steps) * 1.45 + 1.4)
     ax.axis("off")
 
     # 繪製標題
-    title_y = len(steps) * 1.5 + 0.8
+    title_y = len(steps) * 1.45 + 0.75
     ax.text(5, title_y, title, ha="center", va="center", 
-            fontsize=14, fontweight="bold", color="#1A365D",
-            bbox=dict(boxstyle="round,pad=0.5", facecolor="#EBF8FF", edgecolor="#3182CE", lw=1.5))
+            fontsize=13.5, fontweight="bold", color="#1A365D",
+            bbox=dict(boxstyle="round,pad=0.45", facecolor="#EBF8FF", edgecolor="#3182CE", lw=1.6))
 
-    y_pos = len(steps) * 1.5 - 0.5
+    y_pos = len(steps) * 1.45 - 0.5
     for i, step in enumerate(steps):
         name = step.get("name", "")
         desc = step.get("desc", "")
@@ -33,36 +37,36 @@ def draw_flowchart(title, steps, filename, figsize=(9, 11)):
         border = step.get("border", "#4A5568")
         shape = step.get("shape", "box")
 
-        # 繪製方框
+        # 節點形狀
         if shape == "round":
-            box = patches.FancyBboxPatch((1.2, y_pos - 0.45), 7.6, 0.9,
-                                        boxstyle="round,pad=0.2,rounding_size=0.4",
-                                        facecolor=color, edgecolor=border, lw=1.5)
+            box = patches.FancyBboxPatch((1.0, y_pos - 0.45), 8.0, 0.9,
+                                         boxstyle="round,pad=0.18,rounding_size=0.38",
+                                         facecolor=color, edgecolor=border, lw=1.5)
         elif shape == "diamond":
             box = patches.Polygon([[5, y_pos + 0.5], [8.8, y_pos], [5, y_pos - 0.5], [1.2, y_pos]],
                                   facecolor=color, edgecolor=border, lw=1.5)
         else:
-            box = patches.FancyBboxPatch((1.2, y_pos - 0.45), 7.6, 0.9,
-                                        boxstyle="round,pad=0.15,rounding_size=0.15",
-                                        facecolor=color, edgecolor=border, lw=1.5)
+            box = patches.FancyBboxPatch((1.0, y_pos - 0.45), 8.0, 0.9,
+                                         boxstyle="round,pad=0.14,rounding_size=0.14",
+                                         facecolor=color, edgecolor=border, lw=1.5)
         ax.add_patch(box)
 
         # 文字內容
         if desc:
-            ax.text(5, y_pos + 0.15, name, ha="center", va="center", fontsize=11, fontweight="bold", color="#2D3748")
-            ax.text(5, y_pos - 0.18, desc, ha="center", va="center", fontsize=9, color="#4A5568")
+            ax.text(5, y_pos + 0.16, name, ha="center", va="center", fontsize=10.5, fontweight="bold", color="#2D3748")
+            ax.text(5, y_pos - 0.18, desc, ha="center", va="center", fontsize=8.8, color="#4A5568")
         else:
-            ax.text(5, y_pos, name, ha="center", va="center", fontsize=11, fontweight="bold", color="#2D3748")
+            ax.text(5, y_pos, name, ha="center", va="center", fontsize=10.5, fontweight="bold", color="#2D3748")
 
         # 箭頭連接
         if i < len(steps) - 1:
-            ax.annotate("", xy=(5, y_pos - 0.55), xytext=(5, y_pos - 0.95),
-                        arrowprops=dict(arrowstyle="<-", color="#718096", lw=2, mutation_scale=15))
+            ax.annotate("", xy=(5, y_pos - 0.52), xytext=(5, y_pos - 0.92),
+                        arrowprops=dict(arrowstyle="<-", color="#4A5568", lw=2.0, mutation_scale=15))
 
-        y_pos -= 1.5
+        y_pos -= 1.45
 
     plt.tight_layout()
-    out_path = os.path.join("instruction", filename)
+    out_path = os.path.join(_INSTRUCTION_DIR, filename)
     plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"已生成邏輯圖: {out_path}")
@@ -87,31 +91,31 @@ steps_c2 = [
     {"name": "3B. 影像形態學與幾何矩 (回退)", "desc": "遮蔽 Logo -> 門檻二值化 -> 開閉運算 -> cv2.moments 擬合 (xc, yc, R)", "color": "#EDF2F7", "border": "#718096"},
     {"name": "4. CLAHE 局部自適應直方圖均衡化", "desc": "clipLimit=3.0, tileGrid=(8,8)，壓抑全盤邊緣昏暗，凸顯暗纖維微弱反差", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "5. 高斯模糊降噪處理", "desc": "3x3 卷積核 (sigma=1.0) 平滑高頻感測器顆粒噪點", "color": "#EBF8FF", "border": "#3182CE"},
-    {"name": "6. 有效日面方格切割 (Patch Slicing)", "desc": "在 dist <= 0.92 * R 範圍內以 patch_size 步長切割方格，排除邊緣白環與太空", "color": "#EBF8FF", "border": "#3182CE"},
-    {"name": "7. 球面幾何透視校正與真實長寬記錄 (km)", "desc": "依方格中心 (phi, lam) 計算 W_km = s0*dx*sec(lam), H_km = s0*dy*sec(phi)，記錄長寬與長寬比", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
+    {"name": "6. 四向 16px 滑動重疊切割 (50% Overlap)", "desc": "patch_size=32, stride=16 向四面滑動，消除邊界盲區，生成 8,411 個方格", "color": "#EBF8FF", "border": "#3182CE"},
+    {"name": "7. 球面幾何透視校正與真實長寬記錄 (km)", "desc": "依方格中心計算真實物理寬度、長度與面積 (km²)", "color": "#FEEBC8", "border": "#DD6B20"},
+    {"name": "8. 自適應四叉樹細分器 (Quadtree Refinement)", "desc": "接收低同調方格，切為 4 個 16x16 子方格 (去重與球面校正)，供 Class 3 拯救重算", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
 ]
 draw_flowchart("Class 2: SolarDiskCalibrator 邏輯架構圖", steps_c2, "class2_logic.png")
 
 # ==================== Class 3 邏輯圖 ====================
 steps_c3 = [
-    {"name": "1. 接收增強影像與有效方格清單", "desc": "輸入 patch_blurred、方格中心 (cx, cy) 及日輪幾何 (xc, yc, R)", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
-    {"name": "2. Sobel 偏微分梯度計算", "desc": "Ix = Sobel(x方向一階求導), Iy = Sobel(y方向一階求導)", "color": "#EBF8FF", "border": "#3182CE"},
-    {"name": "3. 構建方格二階結構張量 (Structure Tensor)", "desc": "Jxx = mean(Ix²), Jyy = mean(Iy²), Jxy = mean(Ix*Iy) (解決對稱抵消)", "color": "#FEFCBF", "border": "#D69E2E"},
-    {"name": "4. 特徵值解析解求解", "desc": "求最大與最小梯度變化能量 lambda1, lambda2 (l1 >= l2 >= 0)", "color": "#FEFCBF", "border": "#D69E2E"},
-    {"name": "5. 計算同調度 (Coherence C)", "desc": "C = ((l1 - l2) / (l1 + l2 + ε))² (衡量走向單一各向異性度 [0, 1])", "color": "#FEEBC8", "border": "#DD6B20"},
-    {"name": "6. 計算主導切線走向角 (theta)", "desc": "θ = 0.5 * atan2(2*Jxy, Jxx - Jyy) + 90° (垂直於梯度主軸，度數 [0, 180))", "color": "#FEEBC8", "border": "#DD6B20"},
-    {"name": "7. Stonyhurst 日面經緯度投影與打包", "desc": "換算 solar_lat 與 solar_lon，輸出 (N, 9) 結構化數值特徵矩陣", "color": "#E6FFFA", "border": "#319795", "shape": "round"}
+    {"name": "1. 接收增強影像與重疊方格清單", "desc": "輸入 patch_blurred、方格中心 (cx, cy) 及日輪幾何 (xc, yc, R)", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
+    {"name": "2. Sobel 偏導梯度 Ix, Iy 計算", "desc": "全圖一次性微分計算水平與垂直偏導數，供後續全尺度直接復用", "color": "#EBF8FF", "border": "#3182CE"},
+    {"name": "3. 第一階段 32px 粗分析張量求解", "desc": "Jxx=mean(Ix²), Jyy=mean(Iy²), Jxy=mean(Ix*Iy)，特徵值求解 Coherence C 與走向角 θ", "color": "#FEFCBF", "border": "#D69E2E"},
+    {"name": "4. 同調度即時分流 (C >= 0.025)", "desc": "C >= 0.025 之 4,445 筆合格保留；C < 0.025 之 3,966 筆低同調方格標記進入細分", "color": "#FEFCBF", "border": "#D69E2E", "shape": "round"},
+    {"name": "5. 第二階段 16px 自適應細分重算 (拯救機制)", "desc": "回溯 Class 2 切割 16x16 子方格，直接復用 Ix, Iy 重算；4,703 筆成功拯救，1,886 筆平坦噪訊終極丟棄", "color": "#FEEBC8", "border": "#DD6B20"},
+    {"name": "6. 球面方位角投影與多尺度特徵彙整", "desc": "換算 Stonyhurst 經緯度與真實球面方位角，合併輸出 9,148 筆 (N, 10) 多尺度特徵矩陣", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
 ]
 draw_flowchart("Class 3: SolarStructureTensorAnalyzer 邏輯架構圖", steps_c3, "class3_logic.png")
 
 # ==================== Class 4 邏輯圖 ====================
 steps_c4 = [
-    {"name": "1. 接收 (N, 9) 特徵矩陣與增強影像", "desc": "解析方格座標、走向角 θ、同調度 C 與日輪幾何參數", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
-    {"name": "2. 輸出結構化檔案至 process.export/process.data/ 目錄", "desc": "儲存 NumPy 二進位 (*_features.npy) 與 CSV 試算表 (*_features.csv)", "color": "#EBF8FF", "border": "#3182CE"},
+    {"name": "1. 接收 (N, 10) 多尺度特徵矩陣與增強影像", "desc": "解析 32px 與 16px 方格座標、走向角 θ、同調度 C 與日輪幾何", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
+    {"name": "2. 輸出結構化特徵至 process.export/process.data/", "desc": "儲存 NumPy 二進位 (*_features.npy) 與 CSV 試算表 (*_features.csv)", "color": "#EBF8FF", "border": "#3182CE"},
     {"name": "3. 建立三通道視覺化畫布與日輪標註", "desc": "轉為 BGR 畫布，並以綠色圓圈標註定標日肢 (xc, yc, R)", "color": "#EBF8FF", "border": "#3182CE"},
-    {"name": "4. 門檻過濾與向量長度動態縮放", "desc": "排除 C < 0.025 之混亂區域；線段長度調變 L 正比於 C^0.4", "color": "#FEFCBF", "border": "#D69E2E"},
-    {"name": "5. HSV 走向色彩映射與向量疊加繪製", "desc": "角度 θ 對應 HSV 全色相 Hue；繪製抗鋸齒彩色走向線段與中心紅點", "color": "#FEEBC8", "border": "#DD6B20"},
-    {"name": "6. 影像存檔至 process.export/process.image/", "desc": "保存全盤走向疊加圖 (*_overlay.png) 與成果對照圖", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
-    {"name": "7. Matplotlib 對比檢驗視窗呈現", "desc": "呼叫 plt.show() 直觀顯示 CLAHE 增強盤面與走向向量疊加成果", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
+    {"name": "4. 多尺度線長動態縮放與向量繪製", "desc": "線長自適應縮放 L 正比於 patch_size * C^0.4；角度對應 HSV 全色相 Hue 著色", "color": "#FEFCBF", "border": "#D69E2E"},
+    {"name": "5. 繪製 9,148 條走向向量與中心紅點", "desc": "在全盤增強底圖上精確渲染 32px 主特徵與 16px 微觀纖維向量", "color": "#FEEBC8", "border": "#DD6B20"},
+    {"name": "6. 影像存檔至 process.export/process.image/", "desc": "保存全盤走向疊加圖 (*_overlay.png) 與成果對照圖 (*_comparison.png)", "color": "#E6FFFA", "border": "#319795", "shape": "round"},
+    {"name": "7. Matplotlib 對比檢驗視窗呈現", "desc": "呼叫 plt.show() 直觀顯示 CLAHE 增強盤面與多尺度走向向量疊加成果", "color": "#C6F6D5", "border": "#38A169", "shape": "round"}
 ]
 draw_flowchart("Class 4: SolarResultExporter 邏輯架構圖", steps_c4, "class4_logic.png")

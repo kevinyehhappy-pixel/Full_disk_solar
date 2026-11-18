@@ -1,0 +1,23 @@
+flowchart TD
+    Start["1. 啟動 GoogleDriveUploader (gdrive_uploader.py)"] --> Auth{"2. 檢查本地 token.json 狀態?"}
+    
+    Auth -- "存在且有效" --> Ready["獲取 Google Drive 官方 API Client"]
+    Auth -- "過期但具 refresh_token" --> Refresh["自動在背景向 Google 靜默刷新 Token"] --> Ready
+    Auth -- "不存在 (首次登入)" --> OAuth["3. 讀取 credentials.json 啟動本機伺服器<br/>彈出預設瀏覽器進行 Google OAuth 2.0 授權登入"]
+    OAuth --> Consent["使用者於瀏覽器完成登入並允許 Google Drive 存取權限"]
+    Consent --> GenToken["授權成功，自動在本地 drive/ 生成 token.json (免重複登入)"] --> Ready
+    
+    Ready --> FindFolder{"4. 雲端搜尋是否存在目標目錄『專題/原始檔』?"}
+    FindFolder -- "不存在" --> Mkdir["遞迴呼叫 Drive API 自動新建『專題』與『原始檔』資料夾"] --> ScanCache
+    FindFolder -- "已存在" --> ScanCache["5. 掃描本地 fits_cache/ 目錄內所有 *.fits, *.fits.fz 檔案"]
+    
+    ScanCache --> Dedup{"6. 智慧防重複比對 (Deduplication)<br/>逐檔比對雲端既有檔案之檔名與檔案大小"}
+    Dedup -- "已存在同名且同大小" --> Skip["【跳過上傳】節省頻寬與時間"]
+    Dedup -- "雲端尚無此檔案" --> ChunkUpload["7. 分塊斷點續傳 (Resumable Upload)<br/>以 5MB 串流分塊傳輸至雲端目標資料夾"]
+    
+    ChunkUpload --> CheckDelete{"8. 是否啟用 --delete-local 本機硬碟釋放參數?"}
+    CheckDelete -- "是" --> Purge["校驗成功後自動刪除本地 FITS 檔案，實現本地硬碟 0 空間佔用"]
+    CheckDelete -- "否" --> Next
+    Skip --> Next["9. 繼續處理下一個檔案直至所有快取檔案備份完畢"]
+    Purge --> Next
+    Next --> Done["備份作業完成，輸出處理總結日誌"]

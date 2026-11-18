@@ -1,0 +1,31 @@
+flowchart TD
+    subgraph DataIngestion["【階段一：資料取得與預處理】"]
+        Raw["使用者指定觀測時段 (UTC)"] --> C1["【Class 1: SolarSunPyIngestor】<br/>• SunPy Fido 聯網搜尋 GONG 全日面<br/>• 拉普拉斯銳利度評分 Var(∇²I)<br/>• 挑選最佳影幀並標準化 (1024x1024)"]
+        C1 --> C2["【Class 2: SolarDiskCalibrator】<br/>• FITS WCS / 幾何矩雙軌日輪定標 (xc, yc, R)<br/>• CLAHE 局部對比增強 (消除邊緣昏暗)<br/>• 四向 16px 滑動重疊切割 (stride=16, 50% 重疊)<br/>• 生成 8,411 個 32x32 基礎方格與物理尺度 (km)"]
+    end
+
+    subgraph TensorEngine["【階段二：二階自適應多尺度張量分析】"]
+        C2 --> C3A["【Class 3: 第一階段 (32px 粗分析)】<br/>• Sobel 空間偏導 Ix, Iy (全圖計算一次)<br/>• 二階結構張量 Jxx, Jyy, Jxy 求解<br/>• 判定 Coherence >= 0.025: 4,445 筆合格保留"]
+        C3A -- "Coherence < 0.025 (3,966 筆待拯救)" --> C2Refine["【Class 2: 自適應四叉樹細分器】<br/>• 回溯細分為 4 個 16x16 子方格<br/>• 座標去重生成 6,589 個 16x16 方格"]
+        C2Refine --> C3B["【Class 3: 第二階段 (16px 細分重算)】<br/>• 直接復用 Ix, Iy 切片重算張量<br/>• 4,703 筆成功拯救保留 (patch_size=16)<br/>• 1,886 筆確認平坦噪訊【終極丟棄】"]
+        C3A --> C3Merge["【多尺度特徵彙整】<br/>合併為 9,148 筆多尺度數值矩陣 (N, 10)<br/>換算 Stonyhurst 經緯度與真實球面方位角"]
+        C3B --> C3Merge
+    end
+
+    subgraph ProcessExport["【階段三：核心輸出與渲染】"]
+        C3Merge --> C4["【Class 4: SolarResultExporter】<br/>• 輸出 CSV & NPY 檔案至 process.export/process.data/<br/>• 繪製 9,148 條自適應長度彩色走向向量<br/>• 保存全盤疊加圖至 process.export/process.image/"]
+    end
+
+    subgraph AnalyzeModule["【階段四：事後專項物理分析】"]
+        C4 --> Post["【Analyze 專項分析引擎 (run_all_results.py)】"]
+        Post --> Wind["【風花圖 (direction_histogram.py)】<br/>緯度分帶雙向極座標風花圖<br/>輸出: analyze.export/direction_analysis/"]
+        Post --> Ana1["【專項一：緯度對方向】<br/>倍角向量統計 (2θ) 與集中度 R_θ<br/>輸出: analyze.export/analyze.image/"]
+        Post --> Ana2["【專項二：緯度對亮度】<br/>(Z_I, C) 相空間三元分流 (暗條/黑子/譜斑)<br/>輸出: analyze.export/analyze.image/"]
+        Post --> Ana3["【專項三：南北半球對稱性】<br/>南北數量/能量不對稱指數與喬伊定律<br/>輸出: analyze.export/analyze.image/"]
+        Post --> Ana4["【專項四：二維展開日面拓撲圖】<br/>Stonyhurst 經緯展開同調/反差向量場<br/>輸出: analyze.export/analyze.image/"]
+        Post --> Summary["輸出結構化報告至 analyze.export/analyze.data/"]
+    end
+
+    subgraph CloudBackup["【階段五：雲端同步備份】"]
+        Raw --> Drive["【Google Drive 備份模組 (gdrive_uploader.py)】<br/>• OAuth 2.0 桌面授權 (token.json 自動刷新)<br/>• 自動定位建立『專題/原始檔』<br/>• 智慧比對防重複 + 斷點續傳"]
+    end

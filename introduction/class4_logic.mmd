@@ -1,0 +1,12 @@
+flowchart TD
+    A["1. 接收 (9148, 10) 多尺度特徵矩陣、CLAHE 增強影像與日輪幾何"] --> B["2. 結構化檔案導出<br/>• 寫入 NumPy 二進位陣列 (*_features.npy)<br/>• 寫入完整 CSV 數據表 (*_features.csv)<br/>輸出至 【Process】/process.export/process.data/"]
+    
+    B --> C["3. 建立三通道視覺化畫布與標註<br/>• 轉換為 BGR 色彩空間<br/>• 綠色圓圈標註定標日肢輪廓 (xc, yc, R)"]
+    
+    C --> D["4. 多尺度線長動態調變<br/>• 線長 L ∝ patch_size * C^0.4<br/>• 32px 主特徵與 16px 拯救特徵按尺度自適應縮放線長"]
+    
+    D --> E["5. HSV 全色相彩色走向映射與渲染<br/>• 走向角 θ [0°, 180°) 線性對應 HSV Hue 色彩空間<br/>• 繪製 9,148 條抗鋸齒彩色走向對稱線段<br/>• 紅色圓點標註方格中心 (cx, cy)"]
+    
+    E --> F["6. 渲染影像儲存至 【Process】/process.export/process.image/<br/>• 全盤走向疊加圖 (*_overlay.png)<br/>• CLAHE 增強圖 vs 走向圖並列對比圖 (*_comparison.png)"]
+    
+    F --> G["7. Matplotlib 檢驗視窗呈現<br/>呼叫 plt.show() 彈出視窗直觀呈現分析成果 (可選 --no-gui)"]
